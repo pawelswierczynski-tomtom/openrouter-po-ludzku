@@ -1,0 +1,265 @@
+<title>OpenRouter po ludzku</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Układ: wąska kolumna czytania, sekcje przeplatane interaktywnymi demami */
+:root{
+  --bg:#f4f6f8; --surface:#ffffff; --fg:#14202b; --muted:#53626f; --line:#d5dde4;
+  --accent:#0b7a75; --accent-fg:#ffffff; --soft:#dcefee; --warn:#b3261e; --warn-soft:#fbe4e2; --ok:#1b7a3a;
+  --font-body:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1820; --surface:#16222d; --fg:#e6edf3; --muted:#9db0bf; --line:#2b3b49;
+  --accent:#4fd1c5; --accent-fg:#06211f; --soft:#17383a; --warn:#ff8a80; --warn-soft:#3d1f1d; --ok:#6fdc8c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1820; --surface:#16222d; --fg:#e6edf3; --muted:#9db0bf; --line:#2b3b49;
+  --accent:#4fd1c5; --accent-fg:#06211f; --soft:#17383a; --warn:#ff8a80; --warn-soft:#3d1f1d; --ok:#6fdc8c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:18px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 64px}
+main{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+h1{font-size:clamp(2.2rem,6vw,3.4rem);line-height:1.05;margin:0 0 12px;font-weight:800;text-wrap:balance;letter-spacing:-.02em}
+h2{font-size:1.6rem;line-height:1.2;margin:0 0 12px;text-wrap:balance;font-weight:800}
+p{margin:0 0 12px;max-width:65ch}
+.lead{font-size:1.2rem;color:var(--muted)}
+.tag{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 8px}
+b.term,strong{font-weight:800}
+code,.mono{font-family:var(--font-mono);font-size:.88em}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:0}
+.def{border-left:4px solid var(--accent);padding:4px 0 4px 16px;font-size:1.15rem}
+button,select{font:inherit;color:inherit}
+button{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:100%}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.caption{min-height:5.2em;margin:12px 0 0;font-size:1rem}
+.caption b{color:var(--accent)}
+.scroll{overflow-x:auto}
+svg{width:100%;height:auto;display:block;min-width:520px}
+svg text{fill:var(--fg);font-family:var(--font-body);font-size:15px}
+svg .sub{fill:var(--muted);font-size:12.5px}
+.node rect{fill:var(--surface);stroke:var(--line);stroke-width:2;transition:stroke .3s,fill .3s}
+.node.on rect{stroke:var(--accent);fill:var(--soft)}
+.node.bad rect{stroke:var(--warn);fill:var(--warn-soft)}
+.line{stroke:var(--line);stroke-width:3;fill:none}
+.pkt{fill:var(--accent);transition:cx .7s ease,cy .7s ease,opacity .3s}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}body{font-size:17px}}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px;margin:0;overflow-x:auto;font-family:var(--font-mono);font-size:.85rem;line-height:1.55}
+pre .hl{background:var(--soft);color:var(--fg);font-weight:600;padding:1px 3px;border-radius:3px}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td:first-child{white-space:nowrap}
+.mistake{display:grid;gap:12px}
+.mistake .panel{border-left:4px solid var(--warn)}
+.mistake h3{margin:0 0 4px;font-size:1.05rem}
+.mistake p{margin:0}
+.note{font-size:.9rem;color:var(--muted)}
+.result{margin-top:12px;padding:12px 14px;border-radius:8px;background:var(--soft)}
+.result.keep{background:var(--bg);border:1px dashed var(--line)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<main>
+<header>
+  <p class="tag">Wyjaśnienie dla nietechnicznych</p>
+  <h1>OpenRouter</h1>
+  <p class="lead">Jeden adres, przez który programy mogą rozmawiać z wieloma modelami sztucznej inteligencji.</p>
+</header>
+
+<section>
+  <p class="tag">Po co to istnieje</p>
+  <h2>Każda firma od AI ma własne drzwi</h2>
+  <p>Są firmy, które budują modele sztucznej inteligencji, na przykład takie, które piszą teksty albo odpowiadają na pytania. Każda z nich ma własne konto, własny klucz dostępu, własny cennik i własną fakturę. Własny jest też sposób, w jaki program musi do niej napisać.</p>
+  <p>Jeśli twórca aplikacji chce używać trzech modeli od trzech firm, musi załatwić trzy konta i napisać trzy różne fragmenty kodu. Gdy jedna firma ma awarię, aplikacja przestaje działać. Gdy pojawia się lepszy model, trzeba przepisywać kod.</p>
+  <p>OpenRouter zbiera te drzwi w jedno miejsce.</p>
+</section>
+
+<section>
+  <p class="tag">Czym to jest</p>
+  <h2>Definicja w jednym zdaniu</h2>
+  <p class="def"><b class="term">OpenRouter</b> to usługa w internecie, która ma jeden wspólny <b class="term">interfejs API</b> (czyli ustalony sposób, w jaki jeden program wysyła zapytania do drugiego) i przekazuje te zapytania do wielu modeli AI od różnych firm.</p>
+  <p>Twórca aplikacji ma wtedy jedno konto, jeden klucz i jeden rachunek. Zmienia się tylko nazwa modelu, o który prosi.</p>
+</section>
+
+<section>
+  <p class="tag">Jak to działa</p>
+  <h2>Droga jednego pytania, krok po kroku</h2>
+  <p>Użyj przycisków, żeby przejść przez całą drogę. W kroku 4 jeden dostawca ma awarię.</p>
+  <div class="panel">
+    <div class="scroll">
+    <svg id="flow" viewBox="0 0 700 300" role="img" aria-label="Schemat: aplikacja wysyła pytanie do OpenRouter, który przekazuje je do dostawcy modelu, a odpowiedź wraca tą samą drogą.">
+      <path class="line" d="M130 150 H270"/>
+      <path class="line" d="M430 150 C 480 150, 480 70, 540 70"/>
+      <path class="line" d="M430 150 C 480 150, 480 230, 540 230"/>
+      <g class="node" id="nApp"><rect x="20" y="110" width="110" height="80" rx="10"/><text x="75" y="147" text-anchor="middle">Aplikacja</text><text class="sub" x="75" y="168" text-anchor="middle">twoja lub cudza</text></g>
+      <g class="node" id="nOR"><rect x="270" y="100" width="160" height="100" rx="10"/><text x="350" y="145" text-anchor="middle" style="font-weight:800">OpenRouter</text><text class="sub" x="350" y="168" text-anchor="middle">jeden adres</text></g>
+      <g class="node" id="nA"><rect x="540" y="30" width="150" height="80" rx="10"/><text x="615" y="66" text-anchor="middle">Dostawca A</text><text class="sub" x="615" y="87" text-anchor="middle">model „model-a”</text></g>
+      <g class="node" id="nB"><rect x="540" y="190" width="150" height="80" rx="10"/><text x="615" y="226" text-anchor="middle">Dostawca B</text><text class="sub" x="615" y="247" text-anchor="middle">ten sam model</text></g>
+      <circle class="pkt" id="pkt" cx="75" cy="150" r="9" opacity="0"/>
+    </svg>
+    </div>
+    <p class="caption" id="cap" aria-live="polite"></p>
+    <div class="controls">
+      <button id="back">Wstecz</button>
+      <button id="next" class="primary">Dalej</button>
+      <button id="reset">Od nowa</button>
+      <span class="note" id="stepno"></span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="tag">Zobacz sam</p>
+  <h2>Przy zmianie modelu zmienia się jedna linijka</h2>
+  <p>Tak wygląda zapytanie wysyłane do OpenRouter. Wybierz model i zobacz, co się zmienia w zapytaniu. Pozostałe linijki zostają takie same.</p>
+  <div class="panel">
+    <label for="modelSel" class="note">Model do użycia (przykładowe nazwy, aktualną listę podaje OpenRouter)</label>
+    <div class="controls" style="margin-top:6px">
+      <select id="modelSel">
+        <option value="anthropic/claude-sonnet-4">anthropic/claude-sonnet-4</option>
+        <option value="openai/gpt-4o">openai/gpt-4o</option>
+        <option value="google/gemini-2.0-flash-001">google/gemini-2.0-flash-001</option>
+        <option value="meta-llama/llama-3.3-70b-instruct">meta-llama/llama-3.3-70b-instruct</option>
+      </select>
+    </div>
+<pre id="req" style="margin-top:14px"></pre>
+    <p class="note" style="margin-top:12px">Nazwa modelu ma postać <code>firma/model</code>. Adres, klucz i reszta zapytania są takie same dla każdego modelu.</p>
+  </div>
+</section>
+
+<section>
+  <p class="tag">Zobacz sam</p>
+  <h2>Ten sam model może mieć kilku dostawców</h2>
+  <p>Niektóre modele (zwłaszcza otwarte) są uruchamiane przez kilka firm naraz. Mają one różne ceny i szybkość. Możesz powiedzieć OpenRouter, na czym ci bardziej zależy.</p>
+  <div class="panel">
+    <label for="prio" class="note">Co jest ważniejsze?</label>
+    <div class="controls" style="margin-top:6px">
+      <select id="prio">
+        <option value="price">Niska cena</option>
+        <option value="speed">Szybkość odpowiedzi</option>
+      </select>
+    </div>
+    <div class="scroll" style="margin-top:12px">
+    <table>
+      <thead><tr><th>Dostawca</th><th>Cena za 1 mln słów*</th><th>Czas do pierwszej odpowiedzi</th></tr></thead>
+      <tbody id="prov"></tbody>
+    </table>
+    </div>
+    <div class="result" id="pick" aria-live="polite"></div>
+    <p class="note" style="margin-top:12px">* Liczby są wymyślone na potrzeby tego demo. Prawdziwe ceny i czasy zmieniają się i są na stronie OpenRouter. Cena liczona jest od „tokenów”, czyli kawałków tekstu, nie od słów.</p>
+  </div>
+</section>
+
+<section>
+  <p class="tag">Najczęstsze pomyłki</p>
+  <h2>Czego ludzie nie rozumieją</h2>
+  <div class="mistake">
+    <div class="panel"><h3>„OpenRouter to jeszcze jeden model AI”</h3><p>Nie. Sam nic nie „myśli”. Przekazuje twoje pytanie do modelu innej firmy i oddaje odpowiedź.</p></div>
+    <div class="panel"><h3>„Wszystkie modele odpowiadają tak samo”</h3><p>Nie. Jeden adres nie wyrównuje jakości. Modele różnią się jakością, szybkością i ceną, więc wybór modelu nadal ma znaczenie.</p></div>
+    <div class="panel"><h3>„Klucz API to nieszkodliwy tekst”</h3><p><b class="term">Klucz API</b> to tajny ciąg znaków, który mówi OpenRouter, że to ty płacisz. Kto go zdobędzie, zużyje twoje środki. Nie wklejaj go do publicznego kodu ani czatów.</p></div>
+    <div class="panel"><h3>„Dane zostają tylko między mną a modelem”</h3><p>Między tobą a modelem stoi jeszcze OpenRouter, a zwykle także firma, która uruchamia model. Przy wrażliwych danych sprawdź ustawienia prywatności i zasady dostawców.</p></div>
+    <div class="panel"><h3>„Fallback działa zawsze”</h3><p>Zapasowy dostawca pomaga przy awarii lub przeciążeniu, ale nie naprawi złego pytania ani wyczerpanych środków na koncie.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="tag">Ściąga</p>
+  <h2>Pojęcia w jednym miejscu</h2>
+  <div class="panel scroll">
+  <table>
+    <thead><tr><th>Pojęcie</th><th>Co to znaczy</th></tr></thead>
+    <tbody>
+      <tr><td>API</td><td>Ustalony sposób, w jaki jeden program prosi o coś drugi.</td></tr>
+      <tr><td>Klucz API</td><td>Tajny ciąg znaków, który identyfikuje twoje konto.</td></tr>
+      <tr><td>Model</td><td>Program AI, który tworzy odpowiedzi, na przykład tekst.</td></tr>
+      <tr><td>Dostawca</td><td>Firma, która uruchamia model na swoich komputerach.</td></tr>
+      <tr><td>Kredyty</td><td>Wpłacone z góry środki, z których schodzi opłata za każde zapytanie.</td></tr>
+      <tr><td>Fallback</td><td>Automatyczna próba u innego dostawcy, gdy pierwszy zawiedzie.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <p class="tag">Podsumowanie</p>
+  <h2>Najważniejsze</h2>
+  <ul>
+    <li>OpenRouter to jeden adres do wielu modeli AI od różnych firm.</li>
+    <li>Masz jedno konto, jeden klucz i jedno rozliczenie zamiast kilku.</li>
+    <li>Model zmieniasz, podmieniając jedną nazwę w zapytaniu.</li>
+    <li>Gdy dostawca zawiedzie, OpenRouter może spróbować u innego.</li>
+    <li>Jakość, cena i prywatność nadal zależą od wybranego modelu i dostawcy.</li>
+  </ul>
+  <p class="note">Szczegółowe, aktualne informacje o cenach, liczbie modeli i opłatach znajdziesz na <a href="https://openrouter.ai" target="_blank" rel="noopener" style="color:var(--accent)">openrouter.ai</a>.</p>
+</section>
+</main>
+
+<script>
+(function(){
+  // --- Stepper ---
+  var steps=[
+    {cap:'<b>Start.</b> Aplikacja (na przykład czat w firmie) chce uzyskać odpowiedź od modelu AI. Nie ma osobnych połączeń z każdą firmą. Zna tylko jeden adres: OpenRouter.',pos:[75,150],on:['nApp']},
+    {cap:'<b>Krok 1.</b> Aplikacja wysyła zapytanie do OpenRouter. W zapytaniu jest jej klucz, nazwa wybranego modelu i treść pytania.',pos:[350,150],on:['nApp','nOR']},
+    {cap:'<b>Krok 2.</b> OpenRouter sprawdza klucz i wpłacone środki. Potem sprawdza, którzy dostawcy uruchamiają ten model, i wybiera jednego, na przykład po cenie albo szybkości.',pos:[350,150],on:['nOR']},
+    {cap:'<b>Krok 3.</b> OpenRouter przekazuje pytanie dostawcy A, w formacie, który ten dostawca rozumie. Aplikacja nie musi go znać.',pos:[615,70],on:['nOR','nA']},
+    {cap:'<b>Krok 4.</b> Dostawca A ma awarię i nie odpowiada. Bez OpenRouter aplikacja dostałaby błąd.',pos:[615,70],on:['nA'],bad:['nA']},
+    {cap:'<b>Krok 5.</b> To jest <b>fallback</b>: OpenRouter sam wysyła to samo pytanie do dostawcy B, który uruchamia ten sam model.',pos:[615,230],on:['nOR','nB'],bad:['nA']},
+    {cap:'<b>Krok 6.</b> Dostawca B odpowiada. OpenRouter odbiera odpowiedź i odsyła ją do aplikacji. Aplikacja widzi zwykłą odpowiedź i nie wie o awarii.',pos:[75,150],on:['nApp','nOR','nB'],bad:['nA']}
+  ];
+  var i=0, ids=['nApp','nOR','nA','nB'];
+  var cap=document.getElementById('cap'), pkt=document.getElementById('pkt'),
+      back=document.getElementById('back'), next=document.getElementById('next'),
+      no=document.getElementById('stepno');
+  function render(){
+    var s=steps[i];
+    ids.forEach(function(id){
+      var el=document.getElementById(id);
+      el.setAttribute('class','node'+(s.on.indexOf(id)>-1?' on':'')+((s.bad&&s.bad.indexOf(id)>-1)?' bad':''));
+    });
+    pkt.setAttribute('opacity',1);
+    pkt.setAttribute('cx',s.pos[0]); pkt.setAttribute('cy',s.pos[1]);
+    cap.innerHTML=s.cap;
+    no.textContent='Krok '+(i+1)+' z '+steps.length;
+    back.disabled=i===0; next.disabled=i===steps.length-1;
+  }
+  back.onclick=function(){if(i>0){i--;render();}};
+  next.onclick=function(){if(i<steps.length-1){i++;render();}};
+  document.getElementById('reset').onclick=function(){i=0;render();};
+  render();
+
+  // --- Request demo ---
+  var sel=document.getElementById('modelSel'), req=document.getElementById('req');
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  function drawReq(){
+    req.innerHTML=
+'POST https://openrouter.ai/api/v1/chat/completions\n'+
+'Authorization: Bearer <span>TWÓJ_TAJNY_KLUCZ</span>\n\n'+
+'{\n  "model": "<span class="hl">'+esc(sel.value)+'</span>",\n'+
+'  "messages": [\n    { "role": "user", "content": "Napisz krótkie podziękowanie dla klienta." }\n  ]\n}';
+  }
+  sel.onchange=drawReq; drawReq();
+
+  // --- Provider demo (wymyślone liczby) ---
+  var provs=[
+    {n:'Dostawca X',p:0.60,t:900},
+    {n:'Dostawca Y',p:0.90,t:350},
+    {n:'Dostawca Z',p:0.75,t:600}
+  ];
+  var prio=document.getElementById('prio'), body=document.getElementById('prov'), pick=document.getElementById('pick');
+  function drawProv(){
+    var key=prio.value==='price'?'p':'t';
+    var best=provs.slice().sort(function(a,b){return a[key]-b[key];})[0];
+    body.innerHTML=provs.map(function(x){
+      var w=x===best;
+      return '<tr'+(w?' style="background:var(--soft)"':'')+'><td>'+x.n+(w?' ✓':'')+'</td><td class="mono">$'+x.p.toFixed(2)+'</td><td class="mono">'+x.t+' ms</td></tr>';
+    }).join('');
+    pick.innerHTML='OpenRouter wybierze: <strong>'+best.n+'</strong>, bo '+(prio.value==='price'?'ma najniższą cenę.':'odpowiada najszybciej.');
+  }
+  prio.onchange=drawProv; drawProv();
+})();
+</script>
